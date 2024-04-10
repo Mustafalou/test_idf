@@ -3,14 +3,22 @@
 #include <PubSubClient.h>
 #include <SPI.h>
 #include "utilities.h"
+#include "AccelStepper.h"
 #include "driver/gpio.h"
 #include "string.h"
+/*
+#define PUL_PIN 33
+#define DIR_PIN  4
 
-#define PIN_LED 4
+AccelStepper stepper;
+int last_position = 0;
+bool motor_stop = false;
+bool eth_connected = false;
+
 WiFiClient ethClient;
 PubSubClient client(ethClient);
-bool eth_connected = false;
-bool ledOn = true;
+
+
 
 unsigned long lastMillis = 0;
 
@@ -59,25 +67,29 @@ void callback(char *topic, byte *payload, uint32_t length)
     payload[length] = '\0';
     char * charPointer = (char *)payload;
     int pld = atoi(charPointer);
-    Serial.print(topic);
-    Serial.print(" : ");
-    Serial.println(pld);
-    if (strcmp(topic, "esp32eth/ledon")==0){
+    if (strcmp(topic, "esp32eth/DriverStop")==0){
         if(pld == 0){
-            digitalWrite(PIN_LED,LOW);
-            ledOn=false;
+            Serial.println("Step Sart : Stepper should be started");
+            motor_stop=false;
+            stepper.moveTo(0);
         }
         else{
-            digitalWrite(PIN_LED,HIGH);
-            ledOn=true;
+            Serial.println("Step Stop : Stepper should be stopped");
+            motor_stop=true;
+        }
+        Serial.print(motor_stop);
+    }
+    else if(strcmp(topic, "esp32eth/DriverMoveTo")==0){
+        if (!motor_stop){
+            Serial.print( pld);
+            stepper.moveTo(pld);
         }
     }
+    Serial.println();
 }
 
 void setup()
 {
-    pinMode(PIN_LED, OUTPUT);
-    digitalWrite(PIN_LED,HIGH);
     Serial.begin(115200);
     WiFi.onEvent(WiFiEvent);
     if (!ETH.begin(ETH_ADDR, ETH_RESET_PIN, ETH_MDC_PIN,
@@ -94,7 +106,7 @@ void setup()
     }
 
     //set server and port
-    client.setServer("192.168.1.140", 1884);
+    client.setServer("192.168.0.5", 1883);
 
 
     //set callback
@@ -110,16 +122,29 @@ void setup()
         Serial.println("Connecting....");
     }
 
-    client.subscribe("esp32eth/ledon");
+    client.subscribe("esp32eth/DriverMoveTo");
+    client.subscribe("esp32eth/DriverStop");
     
     Serial.println("MQTT Connected!");
+
+    stepper = AccelStepper(1,PUL_PIN,DIR_PIN);
+    stepper.setMaxSpeed(1000);
+    stepper.setAcceleration(400);
+    Serial.println("Step Init : Stepper created");
+
 }
 
 void loop()
 {
     client.loop();
+    if (motor_stop){
+        stepper.stop();
+    }else{
+        stepper.run();
+    }
     if( millis() -  lastMillis >= 1000){
-        client.publish("esp32eth/ledstate",String(ledOn).c_str());
+        client.publish("esp32/driverposition",String(stepper.currentPosition()).c_str());
         lastMillis = millis();
     }
 }
+*/
