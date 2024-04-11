@@ -94,7 +94,7 @@ void setup()
     }
 
     //set server and port
-    client.setServer("192.168.1.140", 1884);
+    client.setServer("192.168.0.5", 1883);
 
 
     //set callback
